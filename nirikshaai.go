@@ -63,6 +63,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -77,6 +78,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+// Version is the current SDK release.
+const Version = "0.1.0"
 
 // Options controls NirikshaAI SDK initialisation.
 type Options struct {
@@ -98,7 +102,7 @@ type Options struct {
 	// APIKey is the project-scoped API key (prefix nai_).
 	APIKey string
 
-	// ServiceName sets the service.name resource attribute (default: "go-service").
+	// ServiceName sets the service.name resource attribute (default: "my-service").
 	ServiceName string
 
 	// Environment sets the deployment.environment attribute (default: "production").
@@ -133,12 +137,25 @@ type Options struct {
 
 // global state shared with eval and prompt helpers
 var _state struct {
-	baseURL string
-	apiKey  string
+	baseURL    string
+	apiKey     string
+	extraAttrs []attribute.KeyValue
 }
+
+// _initialized is set to true after a successful Init call.
+var _initialized bool
 
 // ShutdownFunc flushes and stops all providers. Call it with defer in main.
 type ShutdownFunc func(ctx context.Context) error
+
+// SetGlobalAttributes sets extra resource attributes that will be included in
+// the OpenTelemetry resource created by Init. Must be called before Init.
+func SetGlobalAttributes(attrs ...attribute.KeyValue) {
+	_state.extraAttrs = attrs
+}
+
+// IsInitialized reports whether Init has been called successfully.
+func IsInitialized() bool { return _initialized }
 
 // buildDialOpts returns the gRPC dial options based on the TLS configuration
 // in opts.
@@ -167,7 +184,7 @@ func buildDialOpts(useTLS bool, opts Options) ([]googlegrpc.DialOption, error) {
 // export to NirikshaAI. Returns a ShutdownFunc that should be deferred.
 func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 	if opts.ServiceName == "" {
-		opts.ServiceName = "go-service"
+		opts.ServiceName = "my-service"
 	}
 	if opts.Environment == "" {
 		opts.Environment = "production"
@@ -198,11 +215,16 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 
 	headers := map[string]string{"x-api-key": opts.APIKey}
 
+	baseAttrs := []attribute.KeyValue{
+		semconv.ServiceName(opts.ServiceName),
+		semconv.DeploymentEnvironment(opts.Environment),
+		attribute.String("telemetry.sdk.language", "go"),
+		attribute.String("telemetry.sdk.version", Version),
+	}
+	baseAttrs = append(baseAttrs, _state.extraAttrs...)
+
 	res, err := resource.New(ctx,
-		resource.WithAttributes(
-			semconv.ServiceName(opts.ServiceName),
-			semconv.DeploymentEnvironment(opts.Environment),
-		),
+		resource.WithAttributes(baseAttrs...),
 		resource.WithTelemetrySDK(),
 	)
 	if err != nil {
@@ -265,6 +287,7 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 
 	_state.baseURL = strings.TrimRight(opts.Endpoint, "/")
 	_state.apiKey = opts.APIKey
+	_initialized = true
 
 	return func(ctx context.Context) error {
 		var lastErr error
@@ -275,6 +298,27 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 		}
 		return lastErr
 	}, nil
+}
+
+// Flush forces all pending spans, metrics, and log records to be exported.
+// Call this before process exit in short-lived or serverless environments.
+func Flush(ctx context.Context) error {
+	var lastErr error
+	if tp, ok := otel.GetTracerProvider().(interface {
+		ForceFlush(context.Context) error
+	}); ok {
+		if err := tp.ForceFlush(ctx); err != nil {
+			lastErr = err
+		}
+	}
+	if mp, ok := otel.GetMeterProvider().(interface {
+		ForceFlush(context.Context) error
+	}); ok {
+		if err := mp.ForceFlush(ctx); err != nil {
+			lastErr = err
+		}
+	}
+	return lastErr
 }
 
 // Meter returns the global meter for this service.
