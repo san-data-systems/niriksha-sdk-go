@@ -114,6 +114,10 @@ type Options struct {
 	// EnableLogs exports OTLP logs (default: true).
 	EnableLogs bool
 
+	// SampleRate controls head-based trace sampling (0.0–1.0). Default: 1.0 (sample all).
+	// Use 0.1 to sample 10% of traces. Ignored when 0 (treated as 1.0).
+	SampleRate float64
+
 	// OTLPPort is the OTLP gRPC port used when deriving the gRPC address from
 	// Endpoint (ignored when OTLPEndpoint is set explicitly). Default: 4317.
 	OTLPPort int
@@ -197,6 +201,19 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 		opts.EnableLogs = true
 	}
 
+	if opts.SampleRate <= 0 {
+		opts.SampleRate = 1.0
+	}
+	var sampler sdktrace.Sampler
+	switch {
+	case opts.SampleRate >= 1.0:
+		sampler = sdktrace.AlwaysSample()
+	case opts.SampleRate == 0.0:
+		sampler = sdktrace.NeverSample()
+	default:
+		sampler = sdktrace.ParentBased(sdktrace.TraceIDRatioBased(opts.SampleRate))
+	}
+
 	u, err := url.Parse(opts.Endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("nirikshaai: invalid endpoint %q: %w", opts.Endpoint, err)
@@ -243,6 +260,7 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(traceExp),
 		sdktrace.WithResource(res),
+		sdktrace.WithSampler(sampler),
 	)
 	otel.SetTracerProvider(tp)
 
