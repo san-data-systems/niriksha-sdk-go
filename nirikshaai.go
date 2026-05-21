@@ -59,6 +59,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 
@@ -307,6 +308,17 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 	_state.apiKey = opts.APIKey
 	_initialized = true
 
+	// Register an error handler that surfaces quota-exceeded at ERROR level.
+	// The standard OTEL SDK swallows export errors at DEBUG; this ensures
+	// the developer sees them without hunting through SDK internals.
+	prev := otel.GetErrorHandler()
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		if isQuotaError(err) {
+			log.Printf("[NirikshaAI] ERROR: org data quota exceeded — telemetry is being dropped. Contact your platform admin to increase the quota.")
+		}
+		prev.Handle(err)
+	}))
+
 	return func(ctx context.Context) error {
 		var lastErr error
 		for _, fn := range shutdowns {
@@ -343,4 +355,12 @@ func Flush(ctx context.Context) error {
 // Use after calling Init().
 func Meter(name string) otelmetric.Meter {
 	return otel.Meter(name)
+}
+
+func isQuotaError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "ResourceExhausted") && strings.Contains(msg, "data limit reached")
 }
