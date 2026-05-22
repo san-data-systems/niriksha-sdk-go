@@ -60,7 +60,7 @@ func main() {
 	// SaaS — REST API and OTLP gateway are on separate hosts
 	shutdown, err := nirikshaai.Init(ctx, nirikshaai.Options{
 		Endpoint:     "https://app.niriksha.ai",
-		OTLPEndpoint: "grpc-ingest.niriksha.ai:4317",
+		OTLPEndpoint: "grpc-ingest.niriksha.ai:443",
 		APIKey:       "nai_...",
 		ServiceName:  "my-go-service",
 		Environment:  "production",
@@ -100,7 +100,7 @@ Your `APIKey` is a project-scoped key (prefixed `nai_`). It encodes which org an
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `Endpoint` | `string` | *(required)* | NirikshaAI REST/control-plane base URL. SaaS: `https://app.niriksha.ai`. Private Cloud: `https://niriksha.internal` |
-| `OTLPEndpoint` | `string` | `""` | Override the gRPC OTLP address (`host:port`, no scheme). SaaS: `grpc-ingest.niriksha.ai:4317`. Derived from `Endpoint` if empty. |
+| `OTLPEndpoint` | `string` | `""` | Override the gRPC OTLP address (`host:port`, no scheme). SaaS: `grpc-ingest.niriksha.ai:443`. Derived from `Endpoint` if empty. |
 | `APIKey` | `string` | *(required)* | Project-scoped API key with `nai_` prefix |
 | `ServiceName` | `string` | `"go-service"` | Value of the `service.name` OTEL resource attribute |
 | `Environment` | `string` | `"production"` | Value of the `deployment.environment` OTEL resource attribute |
