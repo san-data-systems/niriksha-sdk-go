@@ -73,7 +73,7 @@ func main() {
 	ctx := context.Background()
 	shutdown, err := nirikshaai.Init(ctx, nirikshaai.Options{
 		Endpoint:      "https://app.niriksha.ai",
-		OTLPEndpoint:  "ingest.niriksha.ai:4317",
+		OTLPEndpoint:  "grpc-ingest.niriksha.ai:4317",
 		APIKey:        os.Getenv("NIRIKSHA_API_KEY"),
 		ServiceName:   "llm-openai-example",
 		Environment:   "production",

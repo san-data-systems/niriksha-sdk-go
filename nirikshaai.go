@@ -96,7 +96,7 @@ type Options struct {
 	// Use this when your REST API and OTLP gateway are on different hosts —
 	// for example on NirikshaAI SaaS:
 	//   Endpoint:     "https://app.niriksha.ai"
-	//   OTLPEndpoint: "ingest.niriksha.ai:4317"
+	//   OTLPEndpoint: "grpc-ingest.niriksha.ai:4317"
 	// If empty, the SDK builds the address from Endpoint's hostname + OTLPPort.
 	OTLPEndpoint string
 
