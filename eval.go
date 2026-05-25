@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/san-data-systems/niriksha-sdk-go/internal/logger"
 )
 
 // EvalInput is a single evaluation result.
@@ -95,7 +96,7 @@ func doPost(ctx context.Context, url string, body any) error {
 	var lastErr error
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		if attempt > 0 {
-			log.Printf("nirikshaai: retrying eval POST %s (attempt %d/%d): %v", url, attempt+1, maxAttempts, lastErr)
+			logger.Warn("retrying eval POST", "url", url, "attempt", attempt+1, "max_attempts", maxAttempts, "err", lastErr)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -127,6 +128,6 @@ func doPost(ctx context.Context, url string, body any) error {
 		return nil
 	}
 
-	log.Printf("nirikshaai: eval POST %s failed after %d attempts: %v", url, maxAttempts, lastErr)
+	logger.Error("eval POST failed", "url", url, "attempts", maxAttempts, "err", lastErr)
 	return lastErr
 }
