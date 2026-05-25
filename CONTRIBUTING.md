@@ -24,12 +24,19 @@ make lint
 make govulncheck
 ```
 
-## Branch Naming
+## Branch Naming & Strategy
 
-- `feat/<short-description>` — new features
-- `fix/<short-description>` — bug fixes
-- `chore/<short-description>` — maintenance
-- `docs/<short-description>` — documentation only
+See [RELEASE.md](RELEASE.md) for the full branching strategy and release process.
+
+| Branch prefix | Purpose | Merges into |
+|---------------|---------|-------------|
+| `feature/` | New features | `main` |
+| `fix/` | Bug fixes | `main` |
+| `hotfix/` | Urgent production patches | `main` |
+| `enhance/` | CI, docs, deps improvements | `main` |
+| `release/x.y.z` | Release preparation | `main` |
+
+**Rule:** Branch from `main`, PR back to `main`. Keep branches short-lived.
 
 ## Commit Messages
 

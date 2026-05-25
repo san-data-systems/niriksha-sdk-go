@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `dev-release.yml` workflow — auto-creates `v{version}-dev.{sha}` GitHub pre-release on every merge to `main`
+- `RELEASE.md` — comprehensive versioning, branching, and release process guide
 - Structured logging via `log/slog` replacing `log.Printf`
 - `WithLogger` option for custom logger injection
 - Unit test suite with ≥80% coverage target
