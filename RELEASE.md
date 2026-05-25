@@ -1,6 +1,6 @@
 # Release Guide — niriksha-sdk-go
 
-> Product: [niriksha.ai](https://niriksha.ai) · Company: [sandatasystem.ai](https://sandatasystem.ai)  
+> Product: [niriksha.ai](https://niriksha.ai)  
 > Maintainer: vbhadauriya@redcloudcomputing.com
 
 ---

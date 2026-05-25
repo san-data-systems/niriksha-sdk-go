@@ -21,4 +21,3 @@ Include:
 We will acknowledge receipt within **48 hours** and aim to release a patch within **14 days** for critical issues.
 
 For more information about NirikshaAI, visit [niriksha.ai](https://niriksha.ai).  
-Company: [San Data Systems](https://sandatasystem.ai)

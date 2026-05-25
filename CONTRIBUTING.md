@@ -1,7 +1,7 @@
 # Contributing to niriksha-sdk-go
 
 Thank you for helping improve the NirikshaAI Go SDK!  
-Product: [niriksha.ai](https://niriksha.ai) · Company: [sandatasystem.ai](https://sandatasystem.ai)
+Product: [niriksha.ai](https://niriksha.ai)
 
 ## Development Setup
 
