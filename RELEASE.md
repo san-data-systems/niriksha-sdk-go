@@ -1,6 +1,6 @@
 # Release Guide — niriksha-sdk-go
 
-> Product: [niriksha.ai](https://niriksha.ai)  
+> Product: [niriksha.ai](https://niriksha.ai) · Company: [sandatasystem.ai](https://sandatasystem.ai)  
 > Maintainer: vbhadauriya@redcloudcomputing.com
 
 ---
@@ -156,12 +156,21 @@ go get github.com/san-data-systems/niriksha-sdk-go@v0.1.0-dev.abc1234
 
 ## Required Secrets & Setup (One-time)
 
+> **Important:** All credentials below must be created or managed under the **niriksha.ai product account / `san-data-systems` GitHub org**, not a personal developer account. This keeps niriksha tokens separate from other San Data Systems products.
+
 | Secret | Purpose | How to get |
 |--------|---------|-----------|
-| `GITHUB_TOKEN` | Create releases, push tags | Auto-provided by GitHub Actions |
-| `NVD_API_KEY` | Speed up govulncheck/OWASP scans | [nvd.nist.gov/developers](https://nvd.nist.gov/developers/request-an-api-key) (free) |
+| `GITHUB_TOKEN` | Create releases, push tags | Auto-provided by GitHub Actions — no setup needed |
+| `NVD_API_KEY` | Speed up govulncheck scans | [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key) — request using the **niriksha.ai product email**; free |
 
-> Go modules require no registry credentials — publishing is just pushing a tag.
+> Go modules require no registry credentials — publishing is just pushing a tag. pkg.go.dev indexes from GitHub automatically.
+
+### Add NVD_API_KEY to this repo
+
+| Step | Action | URL |
+|------|--------|-----|
+| 1 | Request free NVD API key (niriksha.ai product email) | [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key) |
+| 2 | Add secret `NVD_API_KEY` | [github.com/san-data-systems/niriksha-sdk-go/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-go/settings/secrets/actions) |
 
 ---
 
