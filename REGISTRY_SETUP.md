@@ -19,7 +19,7 @@
 ## 1. PyPI — Python SDK
 
 ### What it is
-[PyPI](https://pypi.org) (Python Package Index) is where Python packages are published. Users install with `pip install niriksha-sdk`.
+[PyPI](https://pypi.org) (Python Package Index) is where Python packages are published. Users install with `pip install nirikshaai`.
 
 ### 1.1 Create a PyPI Account
 
@@ -34,12 +34,12 @@
    - Use an authenticator app (Google Authenticator, 1Password, etc.)
    - Save recovery codes securely
 
-### 1.2 Create the `niriksha-sdk` Project on PyPI
+### 1.2 Create the `nirikshaai` project on PyPI
 
 The project is created automatically the first time you publish. However, you can reserve the name:
 
 1. Log in at [pypi.org](https://pypi.org)
-2. The project `niriksha-sdk` will appear at [pypi.org/project/niriksha-sdk](https://pypi.org/project/niriksha-sdk/) after first publish
+2. The project `nirikshaai` will appear at [pypi.org/project/nirikshaai](https://pypi.org/project/nirikshaai/) after first publish
 
 ### 1.3 Configure Trusted Publisher (OIDC — no token needed)
 
@@ -53,7 +53,7 @@ Trusted Publisher lets GitHub Actions publish directly without an API token, usi
 
 | Field | Value |
 |-------|-------|
-| PyPI Project Name | `niriksha-sdk` |
+| PyPI Project Name | `nirikshaai` |
 | Owner (GitHub) | `san-data-systems` |
 | Repository | `niriksha-sdk-python` |
 | Workflow filename | `release.yml` |
@@ -63,7 +63,7 @@ Trusted Publisher lets GitHub Actions publish directly without an API token, usi
 
 | Field | Value |
 |-------|-------|
-| PyPI Project Name | `niriksha-sdk` |
+| PyPI Project Name | `nirikshaai` |
 | Owner (GitHub) | `san-data-systems` |
 | Repository | `niriksha-sdk-python` |
 | Workflow filename | `dev-release.yml` |
@@ -75,8 +75,8 @@ Trusted Publisher lets GitHub Actions publish directly without an API token, usi
 
 After merging and tagging `v0.2.0`:
 ```bash
-pip install niriksha-sdk
-python -c "import niriksha_sdk; print(niriksha_sdk.__version__)"
+pip install nirikshaai
+python -c "import nirikshaai; print(nirikshaai.__version__)"
 ```
 
 ---
