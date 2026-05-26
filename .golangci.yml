@@ -12,10 +12,11 @@ linters:
     - gosec
     - misspell
     - revive
-linters-settings:
-  gosec:
-    excludes:
-      - G402  # TLS InsecureSkipVerify — documented dev-only option
+linters:
+  settings:
+    gosec:
+      excludes:
+        - G402  # TLS InsecureSkipVerify — documented dev-only option
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
