@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "enhance/**"]
+    branches: [main, "enhance/**", "fix/**"]
   pull_request:
     branches: [main]
 
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: "1.25"
           cache: true
       - uses: golangci/golangci-lint-action@v6
         with:
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: "1.25"
           cache: true
       - name: Run tests
         run: go test -race -coverprofile=coverage.out ./...
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: "1.25"
           cache: true
       - run: go build ./...
 
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: "1.25"
           cache: true
       - name: govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

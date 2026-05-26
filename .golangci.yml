@@ -12,7 +12,6 @@ linters:
     - gosec
     - misspell
     - revive
-linters:
   settings:
     gosec:
       excludes:
