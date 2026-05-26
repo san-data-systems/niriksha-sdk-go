@@ -82,7 +82,7 @@ import (
 )
 
 // Version is the current SDK release.
-const Version = "0.1.0"
+const Version = "0.0.1"
 
 // Options controls NirikshaAI SDK initialisation.
 type Options struct {
