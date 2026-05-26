@@ -59,10 +59,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"strings"
 
+	"github.com/san-data-systems/niriksha-sdk-go/internal/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
@@ -81,7 +82,7 @@ import (
 )
 
 // Version is the current SDK release.
-const Version = "0.1.0"
+const Version = "0.0.1"
 
 // Options controls NirikshaAI SDK initialisation.
 type Options struct {
@@ -138,6 +139,11 @@ type Options struct {
 	// the NirikshaAI gateway's TLS certificate. Use for private CAs.
 	// Mutually exclusive with TLSSkipVerify and Insecure.
 	CACertFile string
+
+	// Logger overrides the SDK's internal structured logger.
+	// Pass a *slog.Logger to direct SDK log output (warnings, errors) to your
+	// application's logging pipeline. If nil, the SDK writes to stderr at WARN+.
+	Logger *slog.Logger
 }
 
 // global state shared with eval and prompt helpers
@@ -188,6 +194,15 @@ func buildDialOpts(useTLS bool, opts Options) ([]googlegrpc.DialOption, error) {
 // Init configures global OpenTelemetry providers (traces, metrics, logs) to
 // export to NirikshaAI. Returns a ShutdownFunc that should be deferred.
 func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
+	// Apply custom logger if provided.
+	if opts.Logger != nil {
+		logger.Set(opts.Logger)
+	}
+
+	if opts.Endpoint == "" {
+		return nil, fmt.Errorf("nirikshaai: Endpoint is required")
+	}
+
 	if opts.ServiceName == "" {
 		opts.ServiceName = "my-service"
 	}
@@ -213,6 +228,10 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 		sampler = sdktrace.NeverSample()
 	default:
 		sampler = sdktrace.ParentBased(sdktrace.TraceIDRatioBased(opts.SampleRate))
+	}
+
+	if opts.TLSSkipVerify || opts.Insecure {
+		logger.Warn("TLS verification disabled — do not use in production")
 	}
 
 	u, err := url.Parse(opts.Endpoint)
@@ -314,7 +333,7 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 	prev := otel.GetErrorHandler()
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		if isQuotaError(err) {
-			log.Printf("[NirikshaAI] ERROR: org data quota exceeded — telemetry is being dropped. Contact your platform admin to increase the quota.")
+			logger.Error("org data quota exceeded", "err", err)
 		}
 		prev.Handle(err)
 	}))

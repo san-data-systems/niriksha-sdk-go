@@ -1,0 +1,76 @@
+name: Dev Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: dev-release
+  cancel-in-progress: true
+
+jobs:
+  dev-release:
+    name: Create Dev Pre-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests (gate)
+        run: go test -race ./...
+
+      - name: Read current version
+        id: ver
+        run: |
+          VERSION=$(grep -E '^const Version\s*=' nirikshaai.go | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Compute dev tag
+        id: tag
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          DEV_TAG="v${{ steps.ver.outputs.version }}-dev.${SHA}"
+          echo "tag=$DEV_TAG" >> $GITHUB_OUTPUT
+          echo "Dev tag: $DEV_TAG"
+
+      - name: Push dev tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.tag.outputs.tag }}
+          git push origin ${{ steps.tag.outputs.tag }}
+
+      - name: Create GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "dev build ${{ steps.tag.outputs.tag }}"
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            🔧 **Automated dev build** — not for production use.
+
+            Install with:
+            ```bash
+            go get github.com/san-data-systems/niriksha-sdk-go@${{ steps.tag.outputs.tag }}
+            # or latest from main:
+            go get github.com/san-data-systems/niriksha-sdk-go@main
+            ```
+
+            **Commit:** ${{ github.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger pkg.go.dev index
+        run: |
+          curl -sf "https://sum.golang.org/lookup/github.com/san-data-systems/niriksha-sdk-go@${{ steps.tag.outputs.tag }}" || true

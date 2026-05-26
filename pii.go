@@ -15,7 +15,7 @@ var (
 		`\b\d{3}-\d{2}-\d{4}\b`,
 	)
 	_reCreditCard = regexp.MustCompile(
-		`\b(?:\d[ -]?){13,16}\b`,
+		`\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{0,4}\b`,
 	)
 )
 

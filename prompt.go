@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/san-data-systems/niriksha-sdk-go/internal/logger"
 )
 
 // PromptResponse holds a fully rendered prompt and its metadata.
@@ -83,7 +84,7 @@ func GetPromptFull(ctx context.Context, name string, opts *GetPromptOptions) (Pr
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
 		_state.baseURL+"/api/v1/sdk/prompts/render", bytes.NewReader(b))
 	if err != nil {
-		log.Printf("nirikshaai: get_prompt build request error: %v", err)
+		logger.Error("get_prompt build request error", "err", err)
 		return PromptResponse{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -91,13 +92,13 @@ func GetPromptFull(ctx context.Context, name string, opts *GetPromptOptions) (Pr
 
 	resp, err := _promptClient.Do(req)
 	if err != nil {
-		log.Printf("nirikshaai: get_prompt request error: %v", err)
+		logger.Error("get_prompt request error", "err", err)
 		return PromptResponse{}, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
 		err = fmt.Errorf("nirikshaai: get_prompt status %d", resp.StatusCode)
-		log.Printf("nirikshaai: %v", err)
+		logger.Warn("get_prompt HTTP error", "status", resp.StatusCode)
 		return PromptResponse{}, err
 	}
 
@@ -111,7 +112,7 @@ func GetPromptFull(ctx context.Context, name string, opts *GetPromptOptions) (Pr
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &out); err != nil {
-		log.Printf("nirikshaai: get_prompt parse error: %v", err)
+		logger.Error("get_prompt parse error", "err", err)
 		return PromptResponse{}, err
 	}
 
@@ -156,7 +157,7 @@ func ListPrompts(ctx context.Context) ([]PromptInfo, error) {
 	req.Header.Set("X-API-Key", _state.apiKey)
 	resp, err := _promptClient.Do(req)
 	if err != nil {
-		log.Printf("nirikshaai: list_prompts request error: %v", err)
+		logger.Error("list_prompts request error", "err", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
