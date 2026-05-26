@@ -1,0 +1,23 @@
+version: "2"
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - govet
+    - errcheck
+    - staticcheck
+    - gosimple
+    - ineffassign
+    - unused
+    - gosec
+    - misspell
+    - revive
+linters-settings:
+  gosec:
+    excludes:
+      - G402  # TLS InsecureSkipVerify — documented dev-only option
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+run:
+  timeout: 5m

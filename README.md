@@ -1,8 +1,11 @@
 # NirikshaAI Go SDK
 
+[![CI](https://github.com/san-data-systems/niriksha-sdk-go/actions/workflows/ci.yml/badge.svg)](https://github.com/san-data-systems/niriksha-sdk-go/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/san-data-systems/niriksha-sdk-go)](https://goreportcard.com/report/github.com/san-data-systems/niriksha-sdk-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/san-data-systems/niriksha-sdk-go.svg)](https://pkg.go.dev/github.com/san-data-systems/niriksha-sdk-go)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go version](https://img.shields.io/github/go-mod/go-version/san-data-systems/niriksha-sdk-go.svg)](https://go.dev/)
 [![pkg.go.dev](https://pkg.go.dev/badge/github.com/san-data-systems/niriksha-sdk-go.svg)](https://pkg.go.dev/github.com/san-data-systems/niriksha-sdk-go)
-[![License](https://img.shields.io/github/license/san-data-systems/niriksha-sdk-go.svg)](https://github.com/san-data-systems/niriksha-sdk-go/blob/main/LICENSE)
 
 The official Go SDK for [NirikshaAI](https://nirikshaai.com) — AI-native observability for logs, metrics, traces, and LLM/agent telemetry.
 
