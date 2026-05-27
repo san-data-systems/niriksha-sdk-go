@@ -1,303 +1,252 @@
-# Registry Account Setup Guide
+# Go Module Distribution Setup
 
-> This guide covers one-time account creation and configuration for all NirikshaAI SDK registries.  
+> NirikshaAI Go SDK: `github.com/san-data-systems/niriksha-sdk-go`  
 > Product: [niriksha.ai](https://niriksha.ai) · Company: [San Data Systems](https://sandatasystem.ai)  
-> Maintainer: vbhadauriya@redcloudcomputing.com
+> Maintainer: vbhadauriya@sandatasystem.com
 
 ---
 
-## Table of Contents
+## Overview
 
-1. [PyPI — Python SDK](#1-pypi--python-sdk)
-2. [npm — Node.js SDK](#2-npm--nodejs-sdk)
-3. [Maven Central — Java SDK](#3-maven-central--java-sdk)
-4. [GitHub Secrets — All SDKs](#4-github-secrets--all-sdks)
-5. [GitHub Environments — Python](#5-github-environments--python)
+**Go modules do not require a registry account.** The SDK is distributed via **GitHub + semantic version tags**. When you push a tag like `v0.2.0`, the Go module proxy (`proxy.golang.org`) automatically fetches from GitHub and indexes on `pkg.go.dev`.
 
----
-
-## 1. PyPI — Python SDK
-
-### What it is
-[PyPI](https://pypi.org) (Python Package Index) is where Python packages are published. Users install with `pip install nirikshaai`.
-
-### 1.1 Create a PyPI Account
-
-1. Go to [pypi.org/account/register](https://pypi.org/account/register/)
-2. Fill in:
-   - **Username:** `nirikshaai` _(use the product name, not a personal username)_
-   - **Email:** use the niriksha.ai product email
-   - **Password:** strong password, store in a password manager
-3. Verify your email address
-4. Enable **Two-Factor Authentication (2FA)**:
-   - Go to [pypi.org/manage/account/two-factor](https://pypi.org/manage/account/two-factor/)
-   - Use an authenticator app (Google Authenticator, 1Password, etc.)
-   - Save recovery codes securely
-
-### 1.2 Create the `nirikshaai` project on PyPI
-
-The project is created automatically the first time you publish. However, you can reserve the name:
-
-1. Log in at [pypi.org](https://pypi.org)
-2. The project `nirikshaai` will appear at [pypi.org/project/nirikshaai](https://pypi.org/project/nirikshaai/) after first publish
-
-### 1.3 Configure Trusted Publisher (OIDC — no token needed)
-
-Trusted Publisher lets GitHub Actions publish directly without an API token, using OIDC identity.
-
-1. Log in to PyPI as the `nirikshaai` account
-2. Go to [pypi.org/manage/account/publishing](https://pypi.org/manage/account/publishing/)
-3. Under **"Add a new pending publisher"**, add **two entries**:
-
-**Entry 1 — Stable releases:**
-
-| Field | Value |
-|-------|-------|
-| PyPI Project Name | `nirikshaai` |
-| Owner (GitHub) | `san-data-systems` |
-| Repository | `niriksha-sdk-python` |
-| Workflow filename | `release.yml` |
-| Environment name | `pypi` |
-
-**Entry 2 — Dev builds:**
-
-| Field | Value |
-|-------|-------|
-| PyPI Project Name | `nirikshaai` |
-| Owner (GitHub) | `san-data-systems` |
-| Repository | `niriksha-sdk-python` |
-| Workflow filename | `dev-release.yml` |
-| Environment name | `pypi-dev` |
-
-4. Click **Add** for each entry — they appear as "Pending" until first publish
-
-### 1.4 Verify Setup
-
-After merging and tagging `v0.2.0`:
-```bash
-pip install nirikshaai
-python -c "import nirikshaai; print(nirikshaai.__version__)"
-```
+**This guide covers:**
+1. Ensuring GitHub is configured correctly
+2. Understanding Go module resolution
+3. Verifying pkg.go.dev auto-indexing
 
 ---
 
-## 2. npm — Node.js SDK
+## Prerequisites
 
-### What it is
-[npm](https://npmjs.com) is the Node.js package registry. Users install with `npm install @nirikshaai/sdk`.
-
-### 2.1 Create an npm Account
-
-1. Go to [npmjs.com/signup](https://www.npmjs.com/signup)
-2. Fill in:
-   - **Username:** `nirikshaai` _(product account, not personal)_
-   - **Email:** use the niriksha.ai product email
-   - **Password:** strong password
-3. Verify your email address
-4. Enable **Two-Factor Authentication**:
-   - Go to [npmjs.com/settings/nirikshaai/profile](https://www.npmjs.com/settings/nirikshaai/profile)
-   - Security → Enable 2FA → choose **"Auth and writes"** mode
-   - Save recovery codes
-
-### 2.2 Create the `@nirikshaai` Organization
-
-1. Log in as `nirikshaai`
-2. Go to [npmjs.com/org/create](https://www.npmjs.com/org/create)
-3. Fill in:
-   - **Organization name:** `nirikshaai`
-   - **Plan:** Free (for open source packages)
-4. The scope `@nirikshaai` is now reserved
-
-### 2.3 Generate an Automation Token
-
-> Use **Automation** token type — it bypasses 2FA enforcement in CI (Classic and Granular tokens fail when 2FA is enabled).
-
-1. Log in as `nirikshaai` at [npmjs.com](https://www.npmjs.com)
-2. Go to [npmjs.com/settings/nirikshaai/tokens](https://www.npmjs.com/settings/nirikshaai/tokens)
-   _(or: avatar → Access Tokens)_
-3. Click **Generate New Token** → **Classic Token**
-4. Select type: **Automation**
-5. Copy the token immediately — it is shown only once
-6. Store it in a password manager
-
-### 2.4 Add Token to GitHub
-
-1. Go to [github.com/san-data-systems/niriksha-sdk-node/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-node/settings/secrets/actions)
-2. Click **New repository secret**
-3. Name: `NPM_TOKEN`
-4. Value: paste the Automation token
-5. Click **Add secret**
-
-### 2.5 Verify Setup
-
-After merging and tagging `v0.2.0`:
-```bash
-npm install @nirikshaai/sdk
-node -e "const sdk = require('@nirikshaai/sdk'); console.log('ok')"
-```
+- Repository: `github.com/san-data-systems/niriksha-sdk-go` (must be **public**)
+- Go version: 1.22+
+- `go.mod` file with module path: `github.com/san-data-systems/niriksha-sdk-go`
 
 ---
 
-## 3. Maven Central — Java SDK
+## 1. Repository Configuration (One-time)
 
-### What it is
-[Maven Central](https://central.sonatype.com) is the standard Java package registry. Users add `ai.niriksha:niriksha-sdk-java` to their `pom.xml` or `build.gradle`.
+### Verify the repository is public
 
-### 3.1 Create a Sonatype Central Account
+1. Go to [github.com/san-data-systems/niriksha-sdk-go/settings](https://github.com/san-data-systems/niriksha-sdk-go/settings)
+2. Scroll to **"Danger Zone"** → **Repository Visibility**
+3. Ensure **Public** is selected
+4. If private, click **Change visibility** → select **Public** → confirm
 
-1. Go to [central.sonatype.com/sign-up](https://central.sonatype.com/sign-up)
-2. Fill in:
-   - **Username / email:** use the niriksha.ai product email
-   - **Password:** strong password
-3. Verify your email
-4. Enable **Two-Factor Authentication** in account settings
-
-### 3.2 Verify the `ai.niriksha` Namespace
-
-You must prove you own the `niriksha.ai` domain (which gives you the `ai.niriksha` groupId by Java's reversed-domain convention).
-
-1. Log in at [central.sonatype.com](https://central.sonatype.com)
-2. Go to **Publishing → Namespaces** → [central.sonatype.com/publishing/namespaces](https://central.sonatype.com/publishing/namespaces)
-3. Click **Add Namespace**
-4. Enter: `ai.niriksha`
-5. Sonatype will show a **verification key** (a random string)
-6. Add a DNS TXT record on `niriksha.ai`:
-   ```
-   Type:  TXT
-   Name:  @ (or niriksha.ai)
-   Value: <verification key from Sonatype>
-   TTL:   300
-   ```
-7. Click **Verify Namespace** — DNS propagation takes 5–30 minutes
-8. Status changes to **Verified** ✅
-
-> **Alternative:** If you control the GitHub org `san-data-systems`, you can verify via GitHub instead by setting `io.github.san-data-systems` as the namespace. However, using `ai.niriksha` is preferred for brand consistency.
-
-### 3.3 Generate a Deployment Token
-
-1. Log in to [central.sonatype.com](https://central.sonatype.com)
-2. Click your avatar → **View Account**
-3. Scroll to **Generate User Token**
-4. Click **Generate User Token**
-5. Copy both values:
-   - **Token username** → this is `OSSRH_USERNAME`
-   - **Token password** → this is `OSSRH_PASSWORD`
-6. Store both in a password manager — the password is shown only once
-
-### 3.4 Generate a GPG Signing Key
-
-Maven Central requires all artifacts to be GPG-signed.
+### Verify `go.mod` module path
 
 ```bash
-# 1. Generate the key — use releases@niriksha.ai as the identity
-gpg --gen-key
-#    Real name:    NirikshaAI Releases
-#    Email:        releases@niriksha.ai
-#    Passphrase:   <choose a strong passphrase — save it>
-
-# 2. List keys to get your KEY_ID (the long hex after "sec rsa...")
-gpg --list-secret-keys --keyid-format LONG
-# Example output:
-# sec   rsa4096/AABBCCDD11223344 2025-01-01
-#                ^^^^^^^^^^^^^^^^ this is your KEY_ID
-
-# 3. Upload public key to the Ubuntu keyserver
-gpg --keyserver keyserver.ubuntu.com --send-keys AABBCCDD11223344
-
-# Also upload to keys.openpgp.org (Maven Central checks multiple servers)
-gpg --keyserver keys.openpgp.org --send-keys AABBCCDD11223344
-
-# 4. Export the armored private key (for GitHub secret)
-gpg --armor --export-secret-keys AABBCCDD11223344 > niriksha-releases.gpg.asc
-cat niriksha-releases.gpg.asc
-# Copy the entire output including -----BEGIN PGP PRIVATE KEY BLOCK----- lines
+cd /Users/sandata/2026/niriksha-sdk-go
+head -1 go.mod
+# Output: module github.com/san-data-systems/niriksha-sdk-go
 ```
 
-### 3.5 Add All Secrets to GitHub
-
-1. Go to [github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions](https://github.com/san-data-systems/niriksha-sdk-java/settings/secrets/actions)
-2. Add each secret:
-
-| Secret name | Value |
-|-------------|-------|
-| `OSSRH_USERNAME` | Token username from step 3.3 |
-| `OSSRH_PASSWORD` | Token password from step 3.3 |
-| `GPG_PRIVATE_KEY` | Full output of `gpg --armor --export-secret-keys` (including header/footer lines) |
-| `GPG_PASSPHRASE` | The passphrase you chose in step 3.4 |
-
-### 3.6 Verify Setup
-
-After merging and tagging `v0.1.0`:
-```xml
-<!-- Wait ~15 minutes for Maven Central sync, then test: -->
-<dependency>
-  <groupId>ai.niriksha</groupId>
-  <artifactId>niriksha-sdk-java</artifactId>
-  <version>0.1.0</version>
-</dependency>
+If incorrect, update it:
+```go
+module github.com/san-data-systems/niriksha-sdk-go
 ```
 
-Or search: [central.sonatype.com/search?q=ai.niriksha](https://central.sonatype.com/search?q=ai.niriksha)
+---
+
+## 2. How Go Module Distribution Works
+
+### User Installation
+
+Users install your SDK with:
+
+```bash
+# Latest stable release
+go get github.com/san-data-systems/niriksha-sdk-go
+
+# Specific version
+go get github.com/san-data-systems/niriksha-sdk-go@v0.2.0
+
+# From develop branch (pseudo-version computed automatically)
+go get github.com/san-data-systems/niriksha-sdk-go@develop
+
+# Specific dev build
+go get github.com/san-data-systems/niriksha-sdk-go@v0.2.0-dev.abc1234
+```
+
+### How it Works (No Registry Upload)
+
+1. **User runs `go get`**
+2. **Go fetches module list** from `proxy.golang.org` (Go module proxy)
+3. **Proxy fetches from GitHub** automatically (your repo is public)
+4. **Proxy caches the module** for fast future downloads
+5. **pkg.go.dev indexes tags** automatically (within ~15 minutes)
+
+**No manual upload step. No registry credentials needed.**
 
 ---
 
-## 4. GitHub Secrets — All SDKs
+## 3. Release Workflow (Automated)
 
-Summary of every secret needed across all four repositories:
+### Production Release
 
-| Repository | Secret | Source | Required for |
-|-----------|--------|--------|-------------|
-| `niriksha-sdk-python` | `GITHUB_TOKEN` | Auto-provided | Releases, tags |
-| `niriksha-sdk-go` | `GITHUB_TOKEN` | Auto-provided | Releases, tags |
-| `niriksha-sdk-node` | `GITHUB_TOKEN` | Auto-provided | Releases, tags |
-| `niriksha-sdk-node` | `NPM_TOKEN` | npm → Automation token | `npm publish` |
-| `niriksha-sdk-java` | `GITHUB_TOKEN` | Auto-provided | Releases, tags |
-| `niriksha-sdk-java` | `OSSRH_USERNAME` | Sonatype → Generate User Token | `mvn deploy` |
-| `niriksha-sdk-java` | `OSSRH_PASSWORD` | Sonatype → Generate User Token | `mvn deploy` |
-| `niriksha-sdk-java` | `GPG_PRIVATE_KEY` | Local GPG key export | Artifact signing |
-| `niriksha-sdk-java` | `GPG_PASSPHRASE` | Your GPG key passphrase | Artifact signing |
+Every merge to `main` triggers auto-versioning. The `release.yml` workflow:
 
-> `GITHUB_TOKEN` is injected automatically by GitHub Actions into every workflow run — nothing to configure.
+1. Reads commit history since last tag
+2. Uses conventional commits to compute next version (e.g., `0.2.0`)
+3. Creates and pushes Git tag: `v0.2.0`
+4. Creates GitHub Release
+5. Go proxy fetches the tag → users can `go get @v0.2.0`
+6. pkg.go.dev indexes within ~15 minutes
 
-**Add a secret to a repo:**
-1. Go to the repo on GitHub
-2. Settings → Secrets and variables → Actions
-3. New repository secret → enter name and value → Add secret
+**No secrets required** — only auto-provided `GITHUB_TOKEN`.
 
----
+### Development Release
 
-## 5. GitHub Environments — Python
+Every merge to `develop` triggers `dev-release.yml`:
 
-The Python SDK workflows use GitHub Environments to gate PyPI deployments. Create them before the first release.
-
-### Create `pypi` environment (stable releases)
-
-1. Go to [github.com/san-data-systems/niriksha-sdk-python/settings/environments](https://github.com/san-data-systems/niriksha-sdk-python/settings/environments)
-2. Click **New environment**
-3. Name: `pypi`
-4. Click **Configure environment**
-5. Optionally add **Required reviewers** (e.g. `vbhadauriya`) for manual approval before stable release
-6. Save protection rules
-
-### Create `pypi-dev` environment (dev builds)
-
-1. Same page → **New environment**
-2. Name: `pypi-dev`
-3. No required reviewers needed (dev builds are automatic)
-4. Save
+1. Computes tag: `v0.1.0-dev.a1b2c3d` (short commit SHA)
+2. Creates GitHub pre-release
+3. Users can test with: `go get github.com/san-data-systems/niriksha-sdk-go@v0.1.0-dev.a1b2c3d`
 
 ---
 
-## Quick Reference
+## 4. Verifying Distribution
 
-| Registry | URL | Account email | Username |
-|----------|-----|--------------|---------|
-| PyPI | [pypi.org](https://pypi.org) | niriksha.ai product email | `nirikshaai` |
-| npm | [npmjs.com](https://npmjs.com) | niriksha.ai product email | `nirikshaai` |
-| Maven Central | [central.sonatype.com](https://central.sonatype.com) | niriksha.ai product email | niriksha.ai account |
-| GitHub | [github.com/san-data-systems](https://github.com/san-data-systems) | vbhadauriya@redcloudcomputing.com | `V-Bhadauriya` |
+### After pushing a tag (e.g., `v0.2.0`)
+
+#### Check GitHub Release
+
+1. Go to [github.com/san-data-systems/niriksha-sdk-go/releases](https://github.com/san-data-systems/niriksha-sdk-go/releases)
+2. Verify `v0.2.0` appears
+
+#### Check Go Module Proxy
+
+```bash
+# This should return success (204 or 200):
+curl -I https://proxy.golang.org/github.com/san-data-systems/niriksha-sdk-go/@v/v0.2.0.info
+```
+
+#### Test installation
+
+```bash
+# Create a test directory
+mkdir -p /tmp/gotest && cd /tmp/gotest
+go mod init test
+go get github.com/san-data-systems/niriksha-sdk-go@v0.2.0
+
+# Verify it's installed
+go list -m all | grep niriksha
+# Output: github.com/san-data-systems/niriksha-sdk-go v0.2.0
+```
+
+#### Force pkg.go.dev indexing (optional)
+
+If the module doesn't appear on pkg.go.dev within 15 minutes, force indexing:
+
+```bash
+# This triggers pkg.go.dev to fetch and index the tag immediately:
+go get -d github.com/san-data-systems/niriksha-sdk-go@v0.2.0
+```
+
+Then visit: https://pkg.go.dev/github.com/san-data-systems/niriksha-sdk-go@v0.2.0
 
 ---
 
-> For release workflow and versioning details, see [RELEASE.md](RELEASE.md).  
-> For contributing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+## 5. Troubleshooting
+
+### Module not found after push
+
+**Symptom**: `go get` fails with `no matching versions for query "v0.2.0"`
+
+**Cause**: The module proxy hasn't fetched the tag yet (can take ~5 minutes)
+
+**Solution**:
+1. Wait 5 minutes and retry
+2. Verify the tag was pushed: `git ls-remote --tags origin | grep v0.2.0`
+3. If tag missing locally, force-fetch: `git fetch origin tag v0.2.0`
+
+### pkg.go.dev shows old version
+
+**Symptom**: pkg.go.dev still displays `v0.1.0` after releasing `v0.2.0`
+
+**Cause**: pkg.go.dev's index hasn't refreshed (normal lag)
+
+**Solution**: Force reindex by visiting:
+```
+https://pkg.go.dev/github.com/san-data-systems/niriksha-sdk-go@v0.2.0?tab=doc
+```
+
+This will trigger pkg.go.dev to fetch and cache the new version.
+
+### Release workflow didn't create a tag
+
+**Symptom**: Commits merged to `main` but no new tag/release appears
+
+**Cause**: Commits don't follow conventional commit format
+
+**Solution**: Verify recent commits use proper format:
+```bash
+git log main --oneline -10
+# Should show: feat: ..., fix: ..., chore: ...
+# NOT: update, work in progress, merge pull request (auto-generated)
+```
+
+If commits are non-standard, manually tag:
+```bash
+git checkout main && git pull
+git tag -a v0.2.0 -m "Release v0.2.0"
+git push origin v0.2.0
+```
+
+---
+
+## 6. Secrets & Credentials
+
+**No external credentials needed.** The only secret used is:
+
+| Secret | Source | Purpose |
+|--------|--------|---------|
+| `GITHUB_TOKEN` | Auto-provided by GitHub Actions | Create releases, push tags |
+
+It's automatically injected into every workflow run. No configuration required.
+
+---
+
+## 7. Comparison: Go vs Other Languages
+
+| Language | Registry | Distribution | Credentials |
+|----------|----------|---------------|-----------  |
+| **Python** | PyPI | Upload package file | PyPI token (OIDC) |
+| **Node.js** | npm | Upload package file | npm token |
+| **Java** | Maven Central | Upload package file | GPG key + Sonatype token |
+| **Go** | None (VCS-based) | Git tag → module proxy | GitHub token (auto) |
+
+Go's approach is simpler: **Tag your repo, the rest is automatic**.
+
+---
+
+## 8. FAQ
+
+**Q: What if someone publishes a module with the same name?**  
+A: Impossible. Go modules are tied to their repository URL. Only `san-data-systems` org can push to `github.com/san-data-systems/niriksha-sdk-go`.
+
+**Q: Can I un-publish a version?**  
+A: Not really. Once a tag is pushed, the module proxy caches it forever. You can delete the tag and create a new release, but the old one remains in caches. Best practice: use semantic versioning correctly and don't delete tags.
+
+**Q: Do I need to register the module name somewhere?**  
+A: No. Go uses the repo URL as the unique identifier. Public GitHub = public module.
+
+**Q: How long until pkg.go.dev shows my release?**  
+A: Usually 5–15 minutes. If delayed, force-index by visiting the URL (see Troubleshooting).
+
+**Q: Can I use a private GitHub repo?**  
+A: Yes, but users need credentials to `go get` it. For an open-source SDK, keep it public.
+
+---
+
+## Next Steps
+
+1. Ensure repository is public ✅
+2. Verify `go.mod` has correct module path ✅
+3. Configure branch protection for `main` and `develop` ✅
+4. Merge features to `develop`, releases to `main` ✅
+5. Push a tag → auto-versioning handles the rest ✅
+
+See [RELEASE.md](RELEASE.md) for the full release workflow.  
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.

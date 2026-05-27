@@ -24,38 +24,64 @@ make lint
 make govulncheck
 ```
 
-## Branch Naming & Strategy
+## Branch Model & Strategy
 
-See [RELEASE.md](RELEASE.md) for the full branching strategy and release process.
+This SDK follows a **two-branch release model**:
 
-| Branch prefix | Purpose | Merges into |
-|---------------|---------|-------------|
-| `feature/` | New features | `main` |
-| `fix/` | Bug fixes | `main` |
-| `hotfix/` | Urgent production patches | `main` |
-| `enhance/` | CI, docs, deps improvements | `main` |
-| `release/x.y.z` | Release preparation | `main` |
+| Branch | Purpose | Protection | Auto Release |
+|--------|---------|-----------|--------------|
+| `develop` | Feature work, dev releases | Require PR + CI pass | Yes — `vX.Y.Z-dev.SHA` pre-release on every merge |
+| `main` | Production releases only | Require PR from `develop` only + CI pass + `govulncheck` green | Yes — semver GitHub Release on merge |
 
-**Rule:** Branch from `main`, PR back to `main`. Keep branches short-lived.
+### Workflow
+
+1. **Create feature branches from `develop`**, not `main`:
+   ```bash
+   git checkout develop && git pull
+   git checkout -b feature/your-feature
+   ```
+
+2. **Open PR against `develop`**:
+   - All CI checks must pass (lint, test, vuln scan)
+   - Code review required
+   - After merge → dev release auto-triggers (`vX.Y.Z-dev.SHA`)
+
+3. **When ready for production**, create a PR from `develop` → `main`:
+   - Must come from `develop` (branch gate enforces this)
+   - CI + `govulncheck` must be green (vulnerability gate)
+   - After merge → auto-versioning computes next semver tag
+   - Production GitHub Release created with `vX.Y.Z` tag
+
+See [RELEASE.md](RELEASE.md) for the complete release process and versioning details.
 
 ## Commit Messages
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
+Follow [Conventional Commits](https://www.conventionalcommits.org/) — they drive auto-versioning:
 
 ```
-feat: add support for custom sampling callbacks
-fix: retry on HTTP 503 from eval API
-docs: add gRPC example to README
+feat: add support for custom sampling callbacks     # → minor version bump
+fix: retry on HTTP 503 from eval API               # → patch version bump
+chore: upgrade Go to 1.25.10                        # → patch version bump
+docs: add gRPC example to README                    # → no version bump (docs only)
+
+# Breaking changes bump major version:
+feat: remove deprecated Config.UseOldAPI
+
+BREAKING CHANGE: UseOldAPI option removed in favor of NewAPI
 ```
+
+Commit messages are processed by `mathieudutour/github-tag-action@v6.2` to compute the next semantic version.
 
 ## Pull Request Process
 
-1. Create a branch from `main`
+1. Create a branch from `develop` (not `main`)
 2. Write tests first (TDD) — target 80%+ coverage
-3. Run `make ci` to verify lint + test + build pass locally
+3. Run `make ci` to verify lint + test + build + vuln scan pass locally
 4. Update `CHANGELOG.md` under `[Unreleased]`
-5. Open a PR — all CI checks must pass before merge
+5. Open a PR against `develop` — all CI checks must pass before merge
 6. Request review from a maintainer
+7. After merge to `develop` → GitHub pre-release auto-triggers
+8. When ready for production, maintainer creates PR from `develop` → `main` (branch gate permits only this path)
 
 ## Reporting Issues
 

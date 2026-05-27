@@ -10,7 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.1] - 2026-05-27
 
 ### Added
-- `dev-release.yml` workflow — auto-creates `v{version}-dev.{sha}` GitHub pre-release on every merge to `main`
+- **Two-branch release model:** `develop` for feature work (auto dev releases), `main` for production (auto semver releases)
+- **Branch gate:** CI blocks any PR to `main` that doesn't originate from `develop`
+- **Vulnerability gate:** `govulncheck` blocks merge if any known CVE is detected
+- **Auto-versioning:** `mathieudutour/github-tag-action@v6.2` computes semver bumps from conventional commits:
+  - `feat:` → minor version bump
+  - `fix:` / `chore:` → patch version bump
+  - `BREAKING CHANGE` footer → major version bump
+- **Dev releases:** Every merge to `develop` auto-creates GitHub pre-release tagged `vX.Y.Z-dev.SHA`
+- **Production releases:** Only `develop` can merge to `main` → auto-creates GitHub Release with semver tag
+- `dev-release.yml` workflow — auto-creates `v{version}-dev.{sha}` GitHub pre-release on every merge to `develop`
 - `RELEASE.md` — comprehensive versioning, branching, and release process guide
 - Structured logging via `log/slog` replacing `log.Printf`
 - `WithLogger` option for custom logger injection

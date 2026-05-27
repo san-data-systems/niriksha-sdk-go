@@ -28,6 +28,9 @@ Under the hood this is a thin wrapper around the [OpenTelemetry Go SDK](https://
 - [Graceful Shutdown](#graceful-shutdown)
 - [gRPC Service Example](#grpc-service-example)
 - [Using with an Existing OTEL Setup](#using-with-an-existing-otel-setup)
+- [Contributing](#contributing)
+- [Security](#security)
+- [Changelog](#changelog)
 
 ---
 
@@ -749,6 +752,30 @@ err := nirikshaai.SubmitEval(ctx, nirikshaai.EvalInput{...})
 prompt, err := nirikshaai.GetPrompt(ctx, "my-prompt", nil)
 prompts, err := nirikshaai.ListPrompts(ctx)
 ```
+
+---
+
+---
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup (Go 1.22+, golangci-lint, govulncheck)
+- Branching model (feature branches from `develop`)
+- Commit message format (conventional commits for auto-versioning)
+- Pull request process and testing requirements
+
+---
+
+## Security
+
+For reporting security vulnerabilities, see [SECURITY.md](SECURITY.md). Please do not open public issues for security problems.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a complete release history.
 
 ---
 
