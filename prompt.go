@@ -95,7 +95,7 @@ func GetPromptFull(ctx context.Context, name string, opts *GetPromptOptions) (Pr
 		logger.Error("get_prompt request error", "err", err)
 		return PromptResponse{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 400 {
 		err = fmt.Errorf("nirikshaai: get_prompt status %d", resp.StatusCode)
 		logger.Warn("get_prompt HTTP error", "status", resp.StatusCode)
@@ -160,7 +160,7 @@ func ListPrompts(ctx context.Context) ([]PromptInfo, error) {
 		logger.Error("list_prompts request error", "err", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, _ := io.ReadAll(resp.Body)
 	var out struct {
 		Data struct {

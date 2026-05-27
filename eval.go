@@ -116,7 +116,7 @@ func doPost(ctx context.Context, url string, body any) error {
 			lastErr = err
 			continue
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		if resp.StatusCode >= 500 {
 			lastErr = fmt.Errorf("nirikshaai: eval POST %s status %d", url, resp.StatusCode)
