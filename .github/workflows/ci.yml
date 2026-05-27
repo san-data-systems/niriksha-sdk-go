@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, "enhance/**", "fix/**"]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   lint:
@@ -16,10 +16,10 @@ jobs:
         with:
           go-version: "1.25"
           cache: true
-      - uses: golangci/golangci-lint-action@v6
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          install-mode: goinstall
 
   test:
     name: Test
@@ -30,13 +30,8 @@ jobs:
         with:
           go-version: "1.25"
           cache: true
-      - name: Run tests
-        run: go test -race -coverprofile=coverage.out ./...
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.out
+      - run: go test -race -coverprofile=coverage.out ./...
+      - run: go tool cover -func=coverage.out
 
   build:
     name: Build
@@ -49,7 +44,7 @@ jobs:
           cache: true
       - run: go build ./...
 
-  vuln:
+  vulnerability-scan:
     name: Vulnerability Scan
     runs-on: ubuntu-latest
     steps:
@@ -58,5 +53,20 @@ jobs:
         with:
           go-version: "1.25"
           cache: true
-      - name: govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Run govulncheck (fail on any vulnerability)
+        run: govulncheck ./...
+
+  branch-gate:
+    name: Branch Gate (develop → main only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    steps:
+      - name: Enforce develop → main only
+        run: |
+          if [[ "${{ github.head_ref }}" != "develop" ]]; then
+            echo "ERROR: Only the 'develop' branch may be merged into 'main'."
+            echo "Source branch: ${{ github.head_ref }}"
+            exit 1
+          fi
