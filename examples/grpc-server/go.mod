@@ -1,6 +1,6 @@
 module github.com/san-data-systems/niriksha-sdk-go/examples/grpc-server
 
-go 1.25.10
+go 1.25.11
 
 require (
 	github.com/san-data-systems/niriksha-sdk-go v0.0.0
