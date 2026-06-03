@@ -330,12 +330,18 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 	// Register an error handler that surfaces quota-exceeded at ERROR level.
 	// The standard OTEL SDK swallows export errors at DEBUG; this ensures
 	// the developer sees them without hunting through SDK internals.
-	prev := otel.GetErrorHandler()
+	//
+	// NOTE: Do NOT capture otel.GetErrorHandler() and call prev.Handle(err).
+	// GetErrorHandler returns the delegator object itself, not a snapshot of
+	// the current handler function. Calling prev.Handle after SetErrorHandler
+	// routes back through the same delegator → our new handler → infinite
+	// recursion and stack overflow.
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		if isQuotaError(err) {
 			logger.Error("org data quota exceeded", "err", err)
+		} else {
+			logger.Debug("otel export error", "err", err)
 		}
-		prev.Handle(err)
 	}))
 
 	return func(ctx context.Context) error {
