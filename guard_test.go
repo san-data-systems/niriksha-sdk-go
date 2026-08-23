@@ -481,7 +481,9 @@ func TestLocalSecretFindingsCoversMajorFormats(t *testing.T) {
 		"anthropic_api_key": "sk-ant-" + strings.Repeat("c", 24),
 		"google_api_key":    "AIza" + strings.Repeat("d", 35),
 		"niriksha_api_key":  "nai_" + strings.Repeat("e", 24),
-		"private_key_block": "-----BEGIN RSA PRIVATE KEY-----",
+		// gosec G101 matches the PEM header itself. It is the fixture under test:
+		// the local detector exists precisely to spot this literal.
+		"private_key_block": "-----BEGIN RSA PRIVATE KEY-----", //nolint:gosec
 	}
 	for rule, sample := range cases {
 		t.Run(rule, func(t *testing.T) {
