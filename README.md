@@ -23,6 +23,7 @@ Under the hood this is a thin wrapper around the [OpenTelemetry Go SDK](https://
 - [Metrics](#metrics)
 - [Logs](#logs)
 - [Trace Context Propagation](#trace-context-propagation-http)
+- [Inline Guard](#inline-guard)
 - [Eval Submission](#eval-submission)
 - [Prompt Management](#prompt-management)
 - [Graceful Shutdown](#graceful-shutdown)
@@ -116,6 +117,9 @@ Your `APIKey` is a project-scoped key (prefixed `nai_`). It encodes which org an
 | `Insecure` | `bool` | `false` | Send gRPC without TLS. Use when TLS is terminated at an ingress in front of the gateway. |
 | `TLSSkipVerify` | `bool` | `false` | Use TLS but skip server certificate validation. Dev/staging only. |
 | `CACertFile` | `string` | `""` | Path to a PEM CA certificate for verifying the gateway's TLS cert. Use for private CAs. |
+| `GuardEndpoint` | `string` | *derived* | Base URL of the guard endpoint — the gateway's HTTP listener. Derived from `OTLPEndpoint`, or `Endpoint` when that is empty. See [Inline Guard](#inline-guard) |
+| `GuardFailMode` | `GuardFailMode` | `GuardFailOpen` | Behaviour when the guard is unreachable: `GuardFailOpen`, `GuardFailClosed`, or `GuardFailSecretsClosed` |
+| `GuardMode` | `string` | `""` | Default mode for every guard call: `"monitor"` or `"block"` |
 
 ### Private Cloud examples
 
@@ -425,6 +429,137 @@ otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 	// Add any additional propagators here
 ))
 ```
+
+---
+
+## Inline Guard
+
+Everything else in this SDK records what happened. The guard is enforcement: it
+checks text **before** it reaches the model, so a prompt injection can be refused
+and a leaked credential stripped rather than merely reported afterwards.
+
+```go
+verdict, err := nirikshaai.GuardCheck(ctx, userPrompt, "input")
+if errors.Is(err, nirikshaai.ErrGuardBlocked) {
+    return fmt.Errorf("request refused: %w", err)
+}
+
+// On a redact verdict this returns the rewritten text; otherwise the original.
+resp, err := llm.Complete(ctx, verdict.SafeText(userPrompt))
+```
+
+### Verdicts
+
+| Action | What it means | What you should do |
+|---|---|---|
+| `GuardAllow` | Nothing found | Proceed |
+| `GuardTag` | Something found, not reliable enough to act on | **Proceed.** Record it |
+| `GuardRedact` | Sensitive content found and removed | Proceed **with `verdict.SafeText(text)`** |
+| `GuardBlock` | High-confidence attack | Do not send |
+
+**Only a block returns an error.** A redact verdict returns `nil`, because a
+customer who asked for PII stripping wants their data protected, not their
+application broken. The error wraps `ErrGuardBlocked` and names the rules that
+fired, and the verdict is returned alongside it — so a caller gets the reason
+without a second guard call:
+
+```go
+verdict, err := nirikshaai.GuardCheck(ctx, prompt, "input")
+if errors.Is(err, nirikshaai.ErrGuardBlocked) {
+    log.Warn("blocked", "risk", verdict.RiskScore, "findings", verdict.Findings)
+}
+```
+
+The verdict also carries `RiskScore`, `RiskSeverity`, `Findings`, `Reasons`,
+`PolicySource` and `PolicyEnforced` — the last two tell you whether your org's
+AIDR policy or the product default produced the verdict. Only the former is
+binding, and `GuardMode: "monitor"` cannot lift a block your org's policy
+mandates.
+
+### Tool calls
+
+The check that can actually prevent an action, rather than describe it after the
+fact:
+
+```go
+if _, err := nirikshaai.GuardCheckTool(ctx, "bash", map[string]string{"cmd": cmd}); err != nil {
+    if errors.Is(err, nirikshaai.ErrGuardBlocked) {
+        return errors.New("tool call refused")
+    }
+}
+run(cmd)
+```
+
+Covers file destruction, shell execution, destructive SQL, credential access,
+network egress, and **a credential appearing in a tool argument** — the concrete
+exfiltration path when an agent is persuaded to pass a key to an outbound tool.
+
+`args` may be any JSON-marshalable value or a pre-serialised string. If it cannot
+be marshalled the tool **name** is still checked, and a warning says why the
+arguments were not — an unmarshalable argument must not silently become an
+unchecked tool call.
+
+### Whole conversations
+
+```go
+items := make([]nirikshaai.GuardBatchItem, 0, len(messages))
+for _, m := range messages {
+    items = append(items, nirikshaai.GuardBatchItem{Text: m.Content, Direction: "input"})
+}
+action, verdicts, err := nirikshaai.GuardCheckBatch(ctx, items)
+```
+
+A per-string API is an N+1 for a multi-turn message array, which is every real
+chat application. Up to 32 items; the returned action is the most severe of the
+set, because one blocked message means the conversation must not be sent.
+
+### When the guard is unreachable
+
+| `GuardFailMode` | Behaviour |
+|---|---|
+| `GuardFailOpen` *(default)* | Allow the text through |
+| `GuardFailClosed` | Block everything |
+| `GuardFailSecretsClosed` | Allow everything **except** locally-detectable credentials |
+
+Fail-open is the default because a guard outage must not take down your
+application — but it is **never silent**. Every fall-back logs a warning, sets
+`verdict.FailedOpen`, and increments a `guard.fail_open` counter. A silent
+fail-open is a security hole wearing a reliability costume: the control appears to
+work right up until the moment it is needed.
+
+`GuardFailSecretsClosed` is the mode worth using in production. Ten
+prefix-anchored secret formats are embedded in the SDK — AWS, GitHub, Slack,
+Stripe, Google, OpenAI, Anthropic, PEM private keys, NirikshaAI's own — so a
+server outage stops credential exfiltration locally while everything else still
+flows. `GuardFailClosed` is correct only for a hard compliance boundary; for
+everyone else it converts a guard outage into an application outage.
+
+`LocalSecretFindings` is exported, so you can run the same check yourself — on
+data you are about to log, say — without depending on the guard being reachable.
+
+An unknown `GuardFailMode` makes `Init` return an error rather than silently
+defaulting, so a deployment cannot believe it is fail-closed when it is not.
+
+### Where the guard lives
+
+The guard endpoint is served by the **OTLP gateway**, not the REST API. In SaaS
+those are different hosts, so the URL is derived from `OTLPEndpoint` when you set
+it, and from `Endpoint` when you do not:
+
+| `Endpoint` | `OTLPEndpoint` | Derived guard URL |
+|---|---|---|
+| `https://niriksha.internal` | *(empty)* | `https://niriksha.internal` |
+| `https://app.niriksha.ai` | `grpc-ingest.niriksha.ai:443` | `https://grpc-ingest.niriksha.ai:443` |
+| *(any)* | `niriksha.internal:4317` | `http://niriksha.internal:4318` |
+
+The last row translates the gateway's default gRPC port to its default HTTP port.
+A non-default port is used as configured, since guessing would be worse than
+reusing what you already set. Set `GuardEndpoint` explicitly for anything this
+does not cover — a wrong value shows up as "guard unreachable" on every call.
+
+Requests time out after 3 seconds with **no retry**: this is on the critical path
+in front of your model call, and retrying would turn a 3-second timeout into a
+9-second one. The fail mode is a better answer than a slower one.
 
 ---
 

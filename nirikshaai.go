@@ -144,6 +144,79 @@ type Options struct {
 	// Pass a *slog.Logger to direct SDK log output (warnings, errors) to your
 	// application's logging pipeline. If nil, the SDK writes to stderr at WARN+.
 	Logger *slog.Logger
+
+	// GuardEndpoint is the base URL of the guard endpoint — the OTLP gateway's
+	// HTTP listener, e.g. "https://ingest.niriksha.ai".
+	//
+	// The guard is served by the gateway, not the REST API, so in SaaS these are
+	// different hosts. Derived from OTLPEndpoint when set and from Endpoint when
+	// not; see deriveGuardURL.
+	GuardEndpoint string
+
+	// GuardFailMode is what the guard does when it cannot reach the server:
+	// GuardFailOpen (default) allows the text through, GuardFailClosed blocks
+	// everything, GuardFailSecretsClosed allows everything except
+	// locally-detectable credentials.
+	//
+	// Every fall-back logs a warning and increments guard.fail_open — it is
+	// never silent.
+	GuardFailMode GuardFailMode
+
+	// GuardMode is the default mode sent with every guard call: "monitor" to
+	// observe what would be blocked without enforcing, or "block".
+	//
+	// Note that "monitor" cannot lift a block your org's AIDR policy mandates.
+	GuardMode string
+}
+
+// The gateway's OTLP gRPC port and its HTTP port, where /v1/guard lives.
+const (
+	otlpGRPCPort = "4317"
+	otlpHTTPPort = "4318"
+)
+
+// deriveGuardURL returns a best-effort guard base URL, so the common cases need
+// no extra option.
+//
+// The guard endpoint is served by the OTLP gateway, not the REST API, and in SaaS
+// those are different hosts — so Endpoint alone is not the answer.
+//
+// When otlpEndpoint is given it names the gateway, which is the right host; only
+// its port and scheme need translating. The gateway's gRPC listener is 4317 and
+// its HTTP listener 4318, so a default deployment maps cleanly. A non-default
+// port (443 behind an ingress, say) is kept as configured, because guessing would
+// be worse than reusing what the caller already set.
+//
+// With no otlpEndpoint — the single-host Private Cloud layout — the REST base is
+// also the gateway, so it is used unchanged.
+//
+// Set GuardEndpoint explicitly for anything this does not cover; getting it wrong
+// shows up as a guard that logs "unreachable" on every call, which is loud but
+// only after the fact.
+func deriveGuardURL(base, otlpEndpoint string) string {
+	if otlpEndpoint == "" {
+		return base
+	}
+
+	host := otlpEndpoint
+	scheme := "https"
+	if i := strings.Index(host, "://"); i >= 0 {
+		scheme, host = host[:i], host[i+3:]
+	}
+
+	if i := strings.LastIndex(host, ":"); i > 0 {
+		hostname, port := host[:i], host[i+1:]
+		if port == otlpGRPCPort {
+			port = otlpHTTPPort
+			// A bare gRPC port means a direct, usually in-cluster gateway, which
+			// is typically plaintext. TLS-terminated deployments set 443 and are
+			// left alone by the branch above.
+			scheme = "http"
+		}
+		return scheme + "://" + hostname + ":" + port
+	}
+
+	return scheme + "://" + host
 }
 
 // global state shared with eval and prompt helpers
@@ -325,6 +398,15 @@ func Init(ctx context.Context, opts Options) (ShutdownFunc, error) {
 
 	_state.baseURL = strings.TrimRight(opts.Endpoint, "/")
 	_state.apiKey = opts.APIKey
+
+	guardURL := opts.GuardEndpoint
+	if guardURL == "" {
+		guardURL = deriveGuardURL(_state.baseURL, opts.OTLPEndpoint)
+	}
+	if err := configureGuard(guardURL, opts.GuardFailMode, opts.GuardMode); err != nil {
+		return nil, err
+	}
+
 	_initialized = true
 
 	// Register an error handler that surfaces quota-exceeded at ERROR level.
