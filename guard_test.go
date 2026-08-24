@@ -481,23 +481,32 @@ func TestLocalSecretFindingsCoversMajorFormats(t *testing.T) {
 		"anthropic_api_key": "sk-ant-" + strings.Repeat("c", 24),
 		"google_api_key":    "AIza" + strings.Repeat("d", 35),
 		"niriksha_api_key":  "nai_" + strings.Repeat("e", 24),
-		// gosec G101 matches the PEM header itself. It is the fixture under test:
-		// the local detector exists precisely to spot this literal.
-		"private_key_block": "-----BEGIN RSA PRIVATE KEY-----", //nolint:gosec
 	}
 	for rule, sample := range cases {
 		t.Run(rule, func(t *testing.T) {
-			found := false
-			for _, f := range LocalSecretFindings("here it is: " + sample) {
-				if f.Rule == rule {
-					found = true
-				}
-			}
-			if !found {
-				t.Errorf("%s not detected locally; secrets_closed would leak it", rule)
-			}
+			assertRuleFound(t, rule, sample)
 		})
 	}
+}
+
+func assertRuleFound(t *testing.T, rule, sample string) {
+	t.Helper()
+	for _, f := range LocalSecretFindings("here it is: " + sample) {
+		if f.Rule == rule {
+			return
+		}
+	}
+	t.Errorf("%s not detected locally; secrets_closed would leak it", rule)
+}
+
+// TestLocalSecretFindingsDetectsAPEMHeader is separate from the table above
+// because gosec's G101 attributes a finding to the composite literal's opening
+// line, not to the offending element — so a //nolint on the element does nothing
+// and one on the literal would suppress the check for every entry. Isolating the
+// PEM literal keeps the suppression to the one line that needs it.
+func TestLocalSecretFindingsDetectsAPEMHeader(t *testing.T) {
+	const pemHeader = "-----BEGIN RSA PRIVATE KEY-----" //nolint:gosec // the fixture under test
+	assertRuleFound(t, "private_key_block", pemHeader)
 }
 
 func TestLocalSecretFindingsIgnoresPlaceholders(t *testing.T) {
