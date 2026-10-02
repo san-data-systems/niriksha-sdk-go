@@ -40,6 +40,7 @@ import (
 // SpanType is the kind of work a step is; it maps onto gen_ai.operation.name.
 type SpanType string
 
+// The four step kinds: an LLM call, a tool call, a nested agent, a retrieval.
 const (
 	SpanLLM       SpanType = "llm"
 	SpanTool      SpanType = "tool"
@@ -180,13 +181,12 @@ func Log(ctx context.Context, level, message string, attrs map[string]any) {
 	if sp := trace.SpanFromContext(ctx); sp.IsRecording() {
 		sp.AddEvent(message, trace.WithAttributes(append([]attribute.KeyValue{attribute.String("log.level", strings.ToLower(level))}, kv...)...))
 	}
+	// otel/log ≥ 0.21 records carry attribute.Value / attribute.KeyValue directly.
 	var rec otellog.Record
-	rec.SetBody(otellog.StringValue(message))
+	rec.SetBody(attribute.StringValue(message))
 	rec.SetSeverityText(strings.ToUpper(level))
 	rec.SetSeverity(severityFor(level))
-	for _, a := range kv {
-		rec.AddAttributes(otellog.KeyValue{Key: string(a.Key), Value: otellog.StringValue(a.Value.Emit())})
-	}
+	rec.AddAttributes(kv...)
 	global.GetLoggerProvider().Logger("nirikshaai.agent").Emit(ctx, rec)
 }
 

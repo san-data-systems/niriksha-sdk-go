@@ -35,11 +35,11 @@ func TestObserveSpanLog(t *testing.T) {
 	exp := withExporter(t)
 	err := Observe(context.Background(), "research-agent", func(ctx context.Context) error {
 		Log(ctx, "info", "started", map[string]any{"q": "x"})
-		plan, err := SpanResult(ctx, "plan", SpanLLM, func(ctx context.Context) (string, error) { return "p", nil }, WithModel("gpt-4o"))
+		plan, err := SpanResult(ctx, "plan", SpanLLM, func(context.Context) (string, error) { return "p", nil }, WithModel("gpt-4o"))
 		if err != nil || plan != "p" {
 			return errors.New("plan failed")
 		}
-		return Span(ctx, "search", SpanTool, func(ctx context.Context) error { return nil })
+		return Span(ctx, "search", SpanTool, func(context.Context) error { return nil })
 	})
 	if err != nil {
 		t.Fatal(err)
