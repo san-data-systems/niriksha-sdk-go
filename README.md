@@ -102,6 +102,31 @@ Your `APIKey` is a project-scoped key (prefixed `nai_`). It encodes which org an
 
 ---
 
+## Wrap an Agent
+
+Three calls turn an agent into a **run** on LLM → Runs — live, with a timeline, token and tool counts, and the deterministic health findings (long running, repeated tool, repeated error, no activity, possible loop):
+
+```go
+err := nirikshaai.Observe(ctx, "research-agent", func(ctx context.Context) error { // the root span becomes the run
+    nirikshaai.Log(ctx, "info", "agent started", map[string]any{"question": q})
+    plan, err := nirikshaai.SpanResult(ctx, "plan", nirikshaai.SpanLLM,
+        func(ctx context.Context) (string, error) { return callModel(ctx, q) }, nirikshaai.WithModel("gpt-4o"))
+    if err != nil { return err }
+    docs, err := nirikshaai.SpanResult(ctx, "search", nirikshaai.SpanTool,
+        func(ctx context.Context) ([]string, error) { return search(ctx, plan) })
+    if err != nil { return err }
+    return nirikshaai.Span(ctx, "answer", nirikshaai.SpanLLM, func(ctx context.Context) error { _, err := callModel(ctx, strings.Join(docs, " ")); return err })
+})
+```
+
+| Call | What it is | Attributes written |
+|---|---|---|
+| `Observe(ctx, name, fn, opts...)` | the agent entry point; status becomes Succeeded / Failed | `gen_ai.operation.name=invoke_agent`, `gen_ai.agent.name`, `niriksha.run=true` |
+| `Span` / `SpanResult(ctx, name, type, fn, opts...)` | one step: `SpanLLM`, `SpanTool`, `SpanAgent`, `SpanRetrieval` | `gen_ai.operation.name` (`chat`, `execute_tool`, `invoke_agent`, `retrieval`), `gen_ai.tool.name`, `gen_ai.request.model` via `WithModel` |
+| `Log(ctx, level, message, attrs)` | a structured line on the run | a span event, plus an OTel log record through the global logger provider |
+
+The returned error is recorded on the span and passed back unchanged. These are plain OpenTelemetry GenAI semantic conventions, so the spans read in any OTel backend too. See `examples/agent-basic` for a runnable agent that produces a finding on purpose.
+
 ## Configuration Reference
 
 | Field | Type | Default | Description |

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `Observe`, `Span`, `SpanResult`, `Log` (with `WithModel`, `WithAttributes`) — wrap an agent so NirikshaAI shows it as a live run with health findings. Emits OTel GenAI semantic conventions (`gen_ai.operation.name`, `gen_ai.agent.name`, `gen_ai.tool.name`); no LLM library required. `examples/agent-basic`.
+
 ## [0.0.1] - 2026-05-27
 
 ### Added
